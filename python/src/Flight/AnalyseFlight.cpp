@@ -35,15 +35,14 @@
 
 #include <limits>
 
-void
-Run(DebugReplay &replay, FlightPhaseDetector &flight_phase_detector,
-    WindList &wind_list,
-    const BrokenDateTime &takeoff_time,
-    const BrokenDateTime &scoring_start_time,
-    const BrokenDateTime &scoring_end_time,
-    const BrokenDateTime &landing_time,
-    Trace &full_trace, Trace &triangle_trace, Trace &sprint_trace,
-    ComputerSettings &computer_settings)
+void Run(DebugReplay &replay, FlightPhaseDetector &flight_phase_detector,
+         WindList &wind_list,
+         const BrokenDateTime &takeoff_time,
+         const BrokenDateTime &scoring_start_time,
+         const BrokenDateTime &scoring_end_time,
+         const BrokenDateTime &landing_time,
+         Trace &full_trace, Trace &triangle_trace, Trace &sprint_trace,
+         ComputerSettings &computer_settings)
 {
   GeoPoint last_location = GeoPoint::Invalid();
   constexpr Angle max_longitude_change = Angle::Degrees(30);
@@ -72,7 +71,6 @@ Run(DebugReplay &replay, FlightPhaseDetector &flight_phase_detector,
   const int64_t takeoff_unix = takeoff_time.ToUnixTimeUTC();
   const int64_t landing_unix = landing_time.ToUnixTimeUTC();
 
-
   int64_t scoring_start_unix, scoring_end_unix;
 
   if (scoring_start_time.IsPlausible())
@@ -85,8 +83,8 @@ Run(DebugReplay &replay, FlightPhaseDetector &flight_phase_detector,
   else
     scoring_end_unix = 0;
 
-
-  while (replay.Next()) {
+  while (replay.Next())
+  {
     const MoreData &basic = replay.Basic();
     const int64_t date_time_utc = basic.date_time_utc.ToUnixTimeUTC();
 
@@ -109,7 +107,8 @@ Run(DebugReplay &replay, FlightPhaseDetector &flight_phase_detector,
     wind_computer.Compute(wind_settings, glide_polar, basic,
                           replay.SetCalculated());
 
-    if (replay.Calculated().estimated_wind_available.Modified(last_wind)) {
+    if (replay.Calculated().estimated_wind_available.Modified(last_wind))
+    {
       wind_list.push_back(WindListItem(basic.date_time_utc, basic.gps_altitude,
                                        replay.Calculated().estimated_wind));
     }
@@ -118,9 +117,10 @@ Run(DebugReplay &replay, FlightPhaseDetector &flight_phase_detector,
 
     auto_qnh.Process(basic, replay.SetCalculated(), computer_settings, waypoints);
 
-    if (!computer_settings.pressure_available && replay.Calculated().pressure_available) {
-        computer_settings.pressure = replay.Calculated().pressure;
-        computer_settings.pressure_available = replay.Calculated().pressure_available;
+    if (!computer_settings.pressure_available && replay.Calculated().pressure_available)
+    {
+      computer_settings.pressure = replay.Calculated().pressure;
+      computer_settings.pressure_available = replay.Calculated().pressure_available;
     }
 
     if (!basic.time_available || !basic.location_available ||
@@ -138,7 +138,8 @@ Run(DebugReplay &replay, FlightPhaseDetector &flight_phase_detector,
 
     last_location = basic.location;
 
-    if (date_time_utc >= scoring_start_unix && date_time_utc <= scoring_end_unix) {
+    if (date_time_utc >= scoring_start_unix && date_time_utc <= scoring_end_unix)
+    {
       const TracePoint point(basic);
       full_trace.push_back(point);
       triangle_trace.push_back(point);
@@ -160,21 +161,22 @@ SolveContest(Contest contest,
 }
 
 void AnalyseFlight(DebugReplay &replay,
-             const BrokenDateTime &takeoff_time,
-             const BrokenDateTime &scoring_start_time,
-             const BrokenDateTime &scoring_end_time,
-             const BrokenDateTime &landing_time,
-             ContestStatistics &olc_plus,
-             ContestStatistics &dmst,
-             PhaseList &phase_list,
-             PhaseTotals &phase_totals,
-             WindList &wind_list,
-             ComputerSettings &computer_settings,
-             const unsigned full_points,
-             const unsigned triangle_points,
-             const unsigned sprint_points,
-             const unsigned max_iterations,
-             const unsigned max_tree_size)
+                   const BrokenDateTime &takeoff_time,
+                   const BrokenDateTime &scoring_start_time,
+                   const BrokenDateTime &scoring_end_time,
+                   const BrokenDateTime &landing_time,
+                   ContestStatistics &olc_plus,
+                   ContestStatistics &dmst,
+                   ContestStatistics &xcontest,
+                   PhaseList &phase_list,
+                   PhaseTotals &phase_totals,
+                   WindList &wind_list,
+                   ComputerSettings &computer_settings,
+                   const unsigned full_points,
+                   const unsigned triangle_points,
+                   const unsigned sprint_points,
+                   const unsigned max_iterations,
+                   const unsigned max_tree_size)
 {
   Trace full_trace(0, Trace::null_time, full_points);
   Trace triangle_trace(0, Trace::null_time, triangle_points);
@@ -187,11 +189,15 @@ void AnalyseFlight(DebugReplay &replay,
       computer_settings);
 
   olc_plus = SolveContest(Contest::OLC_PLUS,
-    full_trace, triangle_trace, sprint_trace,
-    max_iterations, max_tree_size);
+                          full_trace, triangle_trace, sprint_trace,
+                          max_iterations, max_tree_size);
   dmst = SolveContest(Contest::DMST,
-    full_trace, triangle_trace, sprint_trace,
-    max_iterations, max_tree_size);
+                      full_trace, triangle_trace, sprint_trace,
+                      max_iterations, max_tree_size);
+
+  xcontest = SolveContest(Contest::XCONTEST,
+                          full_trace, triangle_trace, sprint_trace,
+                          max_iterations, max_tree_size);
 
   phase_list = flight_phase_detector.GetPhases();
   phase_totals = flight_phase_detector.GetTotals();

@@ -54,9 +54,9 @@ PYTHON_SOURCES = \
 	$(ENGINE_SRC_DIR)/Airspace/Predicate/AirspacePredicate.cpp \
 	$(SRC)/NMEA/Aircraft.cpp
 PYTHON_LDADD = $(DEBUG_REPLAY_LDADD)
-PYTHON_LDLIBS = $(shell python-config --ldflags)
+PYTHON_LDLIBS = $(shell python3.10-config --ldflags)
 PYTHON_DEPENDS = CONTEST WAYPOINT UTIL ZZIP GEO MATH TIME
-PYTHON_CPPFLAGS = $(shell python-config --includes) \
+PYTHON_CPPFLAGS = $(shell python3.10-config --includes) \
 	-I$(TEST_SRC_DIR) -Wno-write-strings
 PYTHON_FILTER_FLAGS = -Wwrite-strings
 PYTHON_NO_LIB_PREFIX = y

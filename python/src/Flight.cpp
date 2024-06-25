@@ -37,14 +37,16 @@
 #include <cinttypes>
 #include <limits>
 
-PyObject* xcsoar_Flight_new(PyTypeObject *type, PyObject *args, PyObject *kwargs) {
+PyObject *xcsoar_Flight_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
   /* constructor */
   static char *kwlist[] = {"file", "keep", nullptr};
   PyObject *py_input_data = nullptr;
   bool keep = false;
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|b", kwlist,
-                                   &py_input_data, &keep)) {
+                                   &py_input_data, &keep))
+  {
     return 0;
   }
 
@@ -53,18 +55,21 @@ PyObject* xcsoar_Flight_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
   self->filename = nullptr;
 
 #if PY_MAJOR_VERSION >= 3
-  if (PyUnicode_Check(py_input_data)) {
+  if (PyUnicode_Check(py_input_data))
+  {
     Py_ssize_t length;
     const char *ptr = PyUnicode_AsUTF8AndSize(py_input_data, &length);
-    if (!ptr) {
-        return NULL;
+    if (!ptr)
+    {
+      return NULL;
     }
 
     // add one char for \0
     self->filename = new char[length + 1];
     strncpy(self->filename, ptr, length + 1);
 #else
-  if (PyString_Check(py_input_data) || PyUnicode_Check(py_input_data)) {
+  if (PyString_Check(py_input_data) || PyUnicode_Check(py_input_data))
+  {
     Py_ssize_t length = PyString_Size(py_input_data);
     // add one char for \0
     self->filename = new char[length + 1];
@@ -72,17 +77,21 @@ PyObject* xcsoar_Flight_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
 #endif
 
     Py_BEGIN_ALLOW_THREADS
-    self->flight = new Flight(self->filename, keep);
+        self->flight = new Flight(self->filename, keep);
     Py_END_ALLOW_THREADS
-  } else if (PySequence_Check(py_input_data) == 1) {
+  }
+  else if (PySequence_Check(py_input_data) == 1)
+  {
     Py_ssize_t num_items = PySequence_Fast_GET_SIZE(py_input_data);
 
     self->flight = new Flight();
 
-    for (Py_ssize_t i = 0; i < num_items; ++i) {
+    for (Py_ssize_t i = 0; i < num_items; ++i)
+    {
       PyObject *py_item = PySequence_Fast_GET_ITEM(py_input_data, i);
 
-      if (PySequence_Fast_GET_SIZE(py_item) < 4) {
+      if (PySequence_Fast_GET_SIZE(py_item) < 4)
+      {
         PyErr_SetString(PyExc_TypeError, "Expected a tuple of at least 4.");
         return 0;
       }
@@ -90,7 +99,8 @@ PyObject* xcsoar_Flight_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
       IGCFixEnhanced fix;
       fix.Clear();
 
-      if (!Python::PyTupleToIGCFixEnhanced(py_item, fix)) {
+      if (!Python::PyTupleToIGCFixEnhanced(py_item, fix))
+      {
         return 0;
       }
 
@@ -98,22 +108,25 @@ PyObject* xcsoar_Flight_new(PyTypeObject *type, PyObject *args, PyObject *kwargs
     }
   }
 
-  return (PyObject*) self;
+  return (PyObject *)self;
 }
 
-void xcsoar_Flight_dealloc(Pyxcsoar_Flight *self) {
+void xcsoar_Flight_dealloc(Pyxcsoar_Flight *self)
+{
   /* destructor */
   if (self->filename != nullptr)
     delete[] self->filename;
 
   delete self->flight;
-  Py_TYPE(self)->tp_free((Pyxcsoar_Flight*)self);
+  Py_TYPE(self)->tp_free((Pyxcsoar_Flight *)self);
 }
 
-PyObject* xcsoar_Flight_setQNH(Pyxcsoar_Flight *self, PyObject *args) {
+PyObject *xcsoar_Flight_setQNH(Pyxcsoar_Flight *self, PyObject *args)
+{
   double qnh;
 
-  if (!PyArg_ParseTuple(args, "d", &qnh)) {
+  if (!PyArg_ParseTuple(args, "d", &qnh))
+  {
     return nullptr;
   }
 
@@ -122,11 +135,13 @@ PyObject* xcsoar_Flight_setQNH(Pyxcsoar_Flight *self, PyObject *args) {
   Py_RETURN_TRUE;
 }
 
-PyObject* xcsoar_Flight_path(Pyxcsoar_Flight *self, PyObject *args) {
+PyObject *xcsoar_Flight_path(Pyxcsoar_Flight *self, PyObject *args)
+{
   PyObject *py_begin = nullptr,
            *py_end = nullptr;
 
-  if (!PyArg_ParseTuple(args, "|OO", &py_begin, &py_end)) {
+  if (!PyArg_ParseTuple(args, "|OO", &py_begin, &py_end))
+  {
     return nullptr;
   }
 
@@ -144,13 +159,16 @@ PyObject* xcsoar_Flight_path(Pyxcsoar_Flight *self, PyObject *args) {
 
   DebugReplay *replay = self->flight->Replay();
 
-  if (replay == nullptr) {
+  if (replay == nullptr)
+  {
     PyErr_SetString(PyExc_IOError, "Can't start replay - file not found.");
     return nullptr;
   }
 
-  while (replay->Next()) {
-    if (replay->Level() == -1) continue;
+  while (replay->Next())
+  {
+    if (replay->Level() == -1)
+      continue;
 
     const MoreData &basic = replay->Basic();
     const int64_t date_time_utc = basic.date_time_utc.ToUnixTimeUTC();
@@ -171,7 +189,8 @@ PyObject* xcsoar_Flight_path(Pyxcsoar_Flight *self, PyObject *args) {
 
     PyObject *py_fix = Python::IGCFixEnhancedToPyTuple(fix);
 
-    if (PyList_Append(py_fixes, py_fix) != 0) {
+    if (PyList_Append(py_fixes, py_fix) != 0)
+    {
       delete replay;
       return nullptr;
     }
@@ -184,23 +203,26 @@ PyObject* xcsoar_Flight_path(Pyxcsoar_Flight *self, PyObject *args) {
   return py_fixes;
 }
 
-PyObject* xcsoar_Flight_times(Pyxcsoar_Flight *self) {
+PyObject *xcsoar_Flight_times(Pyxcsoar_Flight *self)
+{
   std::vector<FlightTimeResult> results;
 
   Py_BEGIN_ALLOW_THREADS
-  self->flight->Times(results);
+      self->flight->Times(results);
   Py_END_ALLOW_THREADS
 
-  PyObject *py_times = PyList_New(0);
+      PyObject *py_times = PyList_New(0);
 
-  for (auto times : results) {
+  for (auto times : results)
+  {
     PyObject *py_power_states = PyList_New(0);
 
-    for (auto power_state : times.power_states) {
+    for (auto power_state : times.power_states)
+    {
       PyObject *py_power_state = Py_BuildValue("{s:N,s:N,s:O}",
-        "time", Python::BrokenDateTimeToPy(power_state.time),
-        "location", Python::WriteLonLat(power_state.location),
-        "powered", power_state.state == PowerState::ON ? Py_True : Py_False);
+                                               "time", Python::BrokenDateTimeToPy(power_state.time),
+                                               "location", Python::WriteLonLat(power_state.location),
+                                               "powered", power_state.state == PowerState::ON ? Py_True : Py_False);
 
       if (PyList_Append(py_power_states, py_power_state) != 0)
         return nullptr;
@@ -209,11 +231,12 @@ PyObject* xcsoar_Flight_times(Pyxcsoar_Flight *self) {
     }
 
     PyObject *py_single_flight = Py_BuildValue("{s:N,s:N,s:N}",
-      "takeoff", Python::WriteEvent(times.takeoff_time, times.takeoff_location),
-      "landing", Python::WriteEvent(times.landing_time, times.landing_location),
-      "power_states", py_power_states);
+                                               "takeoff", Python::WriteEvent(times.takeoff_time, times.takeoff_location),
+                                               "landing", Python::WriteEvent(times.landing_time, times.landing_location),
+                                               "power_states", py_power_states);
 
-    if (times.release_time.IsPlausible()) {
+    if (times.release_time.IsPlausible())
+    {
       PyObject *py_release = Python::WriteEvent(times.release_time, times.release_location);
       PyDict_SetItemString(py_single_flight, "release", py_release);
       Py_DECREF(py_release);
@@ -228,7 +251,8 @@ PyObject* xcsoar_Flight_times(Pyxcsoar_Flight *self) {
   return py_times;
 }
 
-PyObject* xcsoar_Flight_reduce(Pyxcsoar_Flight *self, PyObject *args, PyObject *kwargs) {
+PyObject *xcsoar_Flight_reduce(Pyxcsoar_Flight *self, PyObject *args, PyObject *kwargs)
+{
   PyObject *py_begin = nullptr,
            *py_end = nullptr,
            *py_force_endpoints = nullptr;
@@ -247,7 +271,8 @@ PyObject* xcsoar_Flight_reduce(Pyxcsoar_Flight *self, PyObject *args, PyObject *
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOIIIdIO", kwlist,
                                    &py_begin, &py_end, &num_levels, &zoom_factor,
-                                   &max_delta_time, &threshold, &max_points, &py_force_endpoints)) {
+                                   &max_delta_time, &threshold, &max_points, &py_force_endpoints))
+  {
     return nullptr;
   }
 
@@ -267,22 +292,24 @@ PyObject* xcsoar_Flight_reduce(Pyxcsoar_Flight *self, PyObject *args, PyObject *
     /* numeric_limits<int64_t>::max() doesn't work here, because
        that's an invalid date in BrokenDate's eyes. 1970 + 2^33 secs
        is about the year 2242, which is far enough in the future :-) */
-    end = BrokenDateTime::FromUnixTimeUTC(int64_t(2)<<32);
+    end = BrokenDateTime::FromUnixTimeUTC(int64_t(2) << 32);
 
-  if (end - begin < 0) {
+  if (end - begin < 0)
+  {
     PyErr_SetString(PyExc_ValueError, "Start time later then end time.");
     return nullptr;
   }
 
   Py_BEGIN_ALLOW_THREADS
-  self->flight->Reduce(begin, end, num_levels,
-    zoom_factor, threshold, force_endpoints, max_delta_time, max_points);
+      self->flight->Reduce(begin, end, num_levels,
+                           zoom_factor, threshold, force_endpoints, max_delta_time, max_points);
   Py_END_ALLOW_THREADS
 
-  Py_RETURN_NONE;
+      Py_RETURN_NONE;
 }
 
-PyObject* xcsoar_Flight_analyse(Pyxcsoar_Flight *self, PyObject *args, PyObject *kwargs) {
+PyObject *xcsoar_Flight_analyse(Pyxcsoar_Flight *self, PyObject *args, PyObject *kwargs)
+{
   static char *kwlist[] = {"takeoff", "scoring_start", "scoring_end", "landing",
                            "full", "triangle", "sprint",
                            "max_iterations", "max_tree_size", nullptr};
@@ -296,11 +323,13 @@ PyObject* xcsoar_Flight_analyse(Pyxcsoar_Flight *self, PyObject *args, PyObject 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OOOO|IIIII", kwlist,
                                    &py_takeoff, &py_scoring_start, &py_scoring_end, &py_landing,
                                    &full, &triangle, &sprint,
-                                   &max_iterations, &max_tree_size)) {
+                                   &max_iterations, &max_tree_size))
+  {
     return nullptr;
   }
 
-  if (!PyDateTime_Check(py_takeoff) || !PyDateTime_Check(py_landing)) {
+  if (!PyDateTime_Check(py_takeoff) || !PyDateTime_Check(py_landing))
+  {
     PyErr_SetString(PyExc_TypeError, "Expected a DateTime object for takeoff and landing.");
     return nullptr;
   }
@@ -318,6 +347,7 @@ PyObject* xcsoar_Flight_analyse(Pyxcsoar_Flight *self, PyObject *args, PyObject 
 
   ContestStatistics olc_plus;
   ContestStatistics dmst;
+  ContestStatistics xcontest;
 
   PhaseList phase_list;
   PhaseTotals phase_totals;
@@ -327,35 +357,40 @@ PyObject* xcsoar_Flight_analyse(Pyxcsoar_Flight *self, PyObject *args, PyObject 
   bool success;
 
   Py_BEGIN_ALLOW_THREADS
-  success = self->flight->Analyse(takeoff, scoring_start, scoring_end, landing,
-    olc_plus, dmst,
-    phase_list, phase_totals, wind_list,
-    full, triangle, sprint,
-    max_iterations, max_tree_size);
+      success = self->flight->Analyse(takeoff, scoring_start, scoring_end, landing,
+                                      olc_plus, dmst, xcontest, phase_list, phase_totals, wind_list,
+                                      full, triangle, sprint,
+                                      max_iterations, max_tree_size);
   Py_END_ALLOW_THREADS
 
-  if (!success)
-    Py_RETURN_NONE;
+      if (!success)
+          Py_RETURN_NONE;
 
   /* write olc_plus statistics */
   PyObject *py_olc_plus = Py_BuildValue("{s:N,s:N,s:N}",
-    "classic", Python::WriteContest(olc_plus.result[0], olc_plus.solution[0]),
-    "triangle", Python::WriteContest(olc_plus.result[1], olc_plus.solution[1]),
-    "plus", Python::WriteContest(olc_plus.result[2], olc_plus.solution[2]));
+                                        "classic", Python::WriteContest(olc_plus.result[0], olc_plus.solution[0]),
+                                        "triangle", Python::WriteContest(olc_plus.result[1], olc_plus.solution[1]),
+                                        "plus", Python::WriteContest(olc_plus.result[2], olc_plus.solution[2]));
 
   /* write dmst statistics */
   PyObject *py_dmst = Py_BuildValue("{s:N}",
-    "quadrilateral", Python::WriteContest(dmst.result[0], dmst.solution[0]));
+                                    "quadrilateral", Python::WriteContest(dmst.result[0], dmst.solution[0]));
+
+  PyObject *py_xcontest = Py_BuildValue("{s:N,s:N}",
+                                        "free", Python::WriteContest(xcontest.result[0], xcontest.solution[0]),
+                                        "triangle", Python::WriteContest(olc_plus.result[1], olc_plus.solution[1]));
 
   /* write contests */
-  PyObject *py_contests = Py_BuildValue("{s:N,s:N}",
-    "olc_plus", py_olc_plus,
-    "dmst", py_dmst);
+  PyObject *py_contests = Py_BuildValue("{s:N,s:N,s:N}",
+                                        "olc_plus", py_olc_plus,
+                                        "dmst", py_dmst,
+                                        "xcontest", py_xcontest);
 
   /* write fligh phases */
   PyObject *py_phases = PyList_New(0);
 
-  for (Phase phase : phase_list) {
+  for (Phase phase : phase_list)
+  {
     PyObject *py_phase = Python::WritePhase(phase);
     if (PyList_Append(py_phases, py_phase) != 0)
       return nullptr;
@@ -366,7 +401,8 @@ PyObject* xcsoar_Flight_analyse(Pyxcsoar_Flight *self, PyObject *args, PyObject 
   /* write wind list*/
   PyObject *py_wind_list = PyList_New(0);
 
-  for (WindListItem wind_item: wind_list) {
+  for (WindListItem wind_item : wind_list)
+  {
     PyObject *py_wind = Python::WriteWindItem(wind_item);
     if (PyList_Append(py_wind_list, py_wind) != 0)
       return nullptr;
@@ -377,28 +413,33 @@ PyObject* xcsoar_Flight_analyse(Pyxcsoar_Flight *self, PyObject *args, PyObject 
   /* write QNH */
   PyObject *py_qnh;
 
-  if (self->flight->qnh_available) {
+  if (self->flight->qnh_available)
+  {
     py_qnh = PyFloat_FromDouble(self->flight->qnh.GetHectoPascal());
-  } else {
+  }
+  else
+  {
     py_qnh = Py_None;
     Py_INCREF(Py_None);
   }
 
   PyObject *py_result = Py_BuildValue("{s:N,s:N,s:N,s:N,s:N}",
-    "contests", py_contests,
-    "phases", py_phases,
-    "performance", Python::WritePerformanceStats(phase_totals),
-    "wind", py_wind_list,
-    "qnh", py_qnh);
+                                      "contests", py_contests,
+                                      "phases", py_phases,
+                                      "performance", Python::WritePerformanceStats(phase_totals),
+                                      "wind", py_wind_list,
+                                      "qnh", py_qnh);
 
   return py_result;
 }
 
-PyObject* xcsoar_Flight_encode(Pyxcsoar_Flight *self, PyObject *args) {
+PyObject *xcsoar_Flight_encode(Pyxcsoar_Flight *self, PyObject *args)
+{
   PyObject *py_begin = nullptr,
            *py_end = nullptr;
 
-  if (!PyArg_ParseTuple(args, "|OO", &py_begin, &py_end)) {
+  if (!PyArg_ParseTuple(args, "|OO", &py_begin, &py_end))
+  {
     return nullptr;
   }
 
@@ -412,20 +453,23 @@ PyObject* xcsoar_Flight_encode(Pyxcsoar_Flight *self, PyObject *args) {
     end = Python::PyToBrokenDateTime(py_end).ToUnixTimeUTC();
 
   GoogleEncode encoded_locations(2, true, 1e5),
-               encoded_levels,
-               encoded_times,
-               encoded_altitude,
-               encoded_enl;
+      encoded_levels,
+      encoded_times,
+      encoded_altitude,
+      encoded_enl;
 
   DebugReplay *replay = self->flight->Replay();
 
-  if (replay == nullptr) {
+  if (replay == nullptr)
+  {
     PyErr_SetString(PyExc_IOError, "Can't start replay - file not found.");
     return nullptr;
   }
 
-  while (replay->Next()) {
-    if (replay->Level() == -1) continue;
+  while (replay->Next())
+  {
+    if (replay->Level() == -1)
+      continue;
 
     const MoreData &basic = replay->Basic();
     const int64_t date_time_utc = basic.date_time_utc.ToUnixTimeUTC();
@@ -451,83 +495,81 @@ PyObject* xcsoar_Flight_encode(Pyxcsoar_Flight *self, PyObject *args) {
     encoded_altitude.addSignedNumber(self->flight->qnh.PressureAltitudeToQNHAltitude(fix.pressure_altitude));
 
     if (fix.enl >= 0)
-        encoded_enl.addSignedNumber(fix.enl);
+      encoded_enl.addSignedNumber(fix.enl);
   }
 
   delete replay;
 
-
   PyObject *py_result = Py_BuildValue("{s:s,s:s,s:s,s:s,s:s}",
-    "locations", encoded_locations.asString()->c_str(),
-    "levels", encoded_levels.asString()->c_str(),
-    "times", encoded_times.asString()->c_str(),
-    "altitude", encoded_altitude.asString()->c_str(),
-    "enl", encoded_enl.asString()->c_str());
+                                      "locations", encoded_locations.asString()->c_str(),
+                                      "levels", encoded_levels.asString()->c_str(),
+                                      "times", encoded_times.asString()->c_str(),
+                                      "altitude", encoded_altitude.asString()->c_str(),
+                                      "enl", encoded_enl.asString()->c_str());
 
   return py_result;
 }
 
 PyMethodDef xcsoar_Flight_methods[] = {
-  {"setQNH", (PyCFunction)xcsoar_Flight_setQNH, METH_VARARGS, "Set QNH for the flight (in hPa)."},
-  {"path", (PyCFunction)xcsoar_Flight_path, METH_VARARGS, "Get flight as list."},
-  {"times", (PyCFunction)xcsoar_Flight_times, METH_VARARGS, "Get takeoff/release/landing times from flight."},
-  {"reduce", (PyCFunction)xcsoar_Flight_reduce, METH_VARARGS | METH_KEYWORDS, "Reduce flight."},
-  {"analyse", (PyCFunction)xcsoar_Flight_analyse, METH_VARARGS | METH_KEYWORDS, "Analyse flight."},
-  {"encode", (PyCFunction)xcsoar_Flight_encode, METH_VARARGS, "Return encoded flight."},
-  {nullptr, nullptr, 0, nullptr}
-};
+    {"setQNH", (PyCFunction)xcsoar_Flight_setQNH, METH_VARARGS, "Set QNH for the flight (in hPa)."},
+    {"path", (PyCFunction)xcsoar_Flight_path, METH_VARARGS, "Get flight as list."},
+    {"times", (PyCFunction)xcsoar_Flight_times, METH_VARARGS, "Get takeoff/release/landing times from flight."},
+    {"reduce", (PyCFunction)xcsoar_Flight_reduce, METH_VARARGS | METH_KEYWORDS, "Reduce flight."},
+    {"analyse", (PyCFunction)xcsoar_Flight_analyse, METH_VARARGS | METH_KEYWORDS, "Analyse flight."},
+    {"encode", (PyCFunction)xcsoar_Flight_encode, METH_VARARGS, "Return encoded flight."},
+    {nullptr, nullptr, 0, nullptr}};
 
 PyMemberDef xcsoar_Flight_members[] = {
-  {nullptr}  /* Sentinel */
+    {nullptr} /* Sentinel */
 };
 
 PyTypeObject xcsoar_Flight_Type = {
-  PyVarObject_HEAD_INIT(&PyType_Type, 0 /* obj_size */)
-  "xcsoar",         /* char *tp_name; */
-  sizeof(Pyxcsoar_Flight), /* int tp_basicsize; */
-  0,                     /* int tp_itemsize; not used much */
-  (destructor)xcsoar_Flight_dealloc, /* destructor tp_dealloc; */
-  0,                     /* printfunc  tp_print; */
-  0,                     /* getattrfunc  tp_getattr; __getattr__ */
-  0,                     /* setattrfunc  tp_setattr; __setattr__ */
-  0,                     /* cmpfunc  tp_compare; __cmp__ */
-  0,                     /* reprfunc  tp_repr; __repr__ */
-  0,                     /* PyNumberMethods *tp_as_number; */
-  0,                     /* PySequenceMethods *tp_as_sequence; */
-  0,                     /* PyMappingMethods *tp_as_mapping; */
-  0,                     /* hashfunc tp_hash; __hash__ */
-  0,                     /* ternaryfunc tp_call; __call__ */
-  0,                     /* reprfunc tp_str; __str__ */
-  0,                     /* tp_getattro */
-  0,                     /* tp_setattro */
-  0,                     /* tp_as_buffer */
-  Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-  "xcsoar.Flight object",  /* tp_doc */
-  0,                     /* tp_traverse */
-  0,                     /* tp_clear */
-  0,                     /* tp_richcompare */
-  0,                     /* tp_weaklistoffset */
-  0,                     /* tp_iter */
-  0,                     /* tp_iternext */
-  xcsoar_Flight_methods,   /* tp_methods */
-  xcsoar_Flight_members,   /* tp_members */
-  0,                     /* tp_getset */
-  0,                     /* tp_base */
-  0,                     /* tp_dict */
-  0,                     /* tp_descr_get */
-  0,                     /* tp_descr_set */
-  0,                     /* tp_dictoffset */
-  0,                     /* tp_init */
-  0,                     /* tp_alloc */
-  xcsoar_Flight_new,     /* tp_new */
-/* this could be extended even further...
-   * http://starship.python.net/crew/arcege/extwriting/pyext.html
-   */
+    PyVarObject_HEAD_INIT(&PyType_Type, 0 /* obj_size */) "xcsoar", /* char *tp_name; */
+    sizeof(Pyxcsoar_Flight),                                        /* int tp_basicsize; */
+    0,                                                              /* int tp_itemsize; not used much */
+    (destructor)xcsoar_Flight_dealloc,                              /* destructor tp_dealloc; */
+    0,                                                              /* printfunc  tp_print; */
+    0,                                                              /* getattrfunc  tp_getattr; __getattr__ */
+    0,                                                              /* setattrfunc  tp_setattr; __setattr__ */
+    0,                                                              /* cmpfunc  tp_compare; __cmp__ */
+    0,                                                              /* reprfunc  tp_repr; __repr__ */
+    0,                                                              /* PyNumberMethods *tp_as_number; */
+    0,                                                              /* PySequenceMethods *tp_as_sequence; */
+    0,                                                              /* PyMappingMethods *tp_as_mapping; */
+    0,                                                              /* hashfunc tp_hash; __hash__ */
+    0,                                                              /* ternaryfunc tp_call; __call__ */
+    0,                                                              /* reprfunc tp_str; __str__ */
+    0,                                                              /* tp_getattro */
+    0,                                                              /* tp_setattro */
+    0,                                                              /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,                       /* tp_flags */
+    "xcsoar.Flight object",                                         /* tp_doc */
+    0,                                                              /* tp_traverse */
+    0,                                                              /* tp_clear */
+    0,                                                              /* tp_richcompare */
+    0,                                                              /* tp_weaklistoffset */
+    0,                                                              /* tp_iter */
+    0,                                                              /* tp_iternext */
+    xcsoar_Flight_methods,                                          /* tp_methods */
+    xcsoar_Flight_members,                                          /* tp_members */
+    0,                                                              /* tp_getset */
+    0,                                                              /* tp_base */
+    0,                                                              /* tp_dict */
+    0,                                                              /* tp_descr_get */
+    0,                                                              /* tp_descr_set */
+    0,                                                              /* tp_dictoffset */
+    0,                                                              /* tp_init */
+    0,                                                              /* tp_alloc */
+    xcsoar_Flight_new,                                              /* tp_new */
+                                                                    /* this could be extended even further...
+                                                                     * http://starship.python.net/crew/arcege/extwriting/pyext.html
+                                                                     */
 };
 
-bool Flight_init(PyObject* m) {
+bool Flight_init(PyObject *m)
+{
   if (PyType_Ready(&xcsoar_Flight_Type) < 0)
-      return false;
+    return false;
 
   PyDateTime_IMPORT;
 

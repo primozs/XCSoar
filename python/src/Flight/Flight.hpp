@@ -36,7 +36,8 @@
 
 class DebugReplay;
 
-class Flight {
+class Flight
+{
 private:
   std::vector<IGCFixEnhanced> *fixes;
   bool keep_flight;
@@ -51,7 +52,8 @@ public:
    * Create a empty flight object, used to create a flight from in-memory data
    */
   Flight()
-    : keep_flight(true), flight_file(nullptr) {
+      : keep_flight(true), flight_file(nullptr)
+  {
     fixes = new std::vector<IGCFixEnhanced>;
     qnh = AtmosphericPressure::Standard();
     qnh_available.Clear();
@@ -65,18 +67,21 @@ public:
   /**
    * Create a flight object with file source
    */
-  Flight(const char* _flight_file, bool _keep_flight);
+  Flight(const char *_flight_file, bool _keep_flight);
 
   /**
    * Return a DebugReplay, either direct from file or from memory,
    * depending on the keep_flight flag. Don't forget to delete
    * the replay after use.
    */
-  DebugReplay *Replay() {
+  DebugReplay *Replay()
+  {
     DebugReplay *replay;
 
-    if (keep_flight) replay = DebugReplayVector::Create(*fixes);
-    else replay = DebugReplayIGC::Create(flight_file);
+    if (keep_flight)
+      replay = DebugReplayVector::Create(*fixes);
+    else
+      replay = DebugReplayIGC::Create(flight_file);
 
     if (qnh_available)
       replay->SetQNH(qnh);
@@ -85,9 +90,11 @@ public:
   };
 
   /* Search for flights within the fixes */
-  unsigned Times(std::vector<FlightTimeResult> &results) {
+  unsigned Times(std::vector<FlightTimeResult> &results)
+  {
     DebugReplay *replay = Replay();
-    if (replay == nullptr) return 0;
+    if (replay == nullptr)
+      return 0;
 
     FlightTimes(*replay, results);
     delete replay;
@@ -112,6 +119,7 @@ public:
                const BrokenDateTime landing_time,
                ContestStatistics &olc_plus,
                ContestStatistics &dmst,
+               ContestStatistics &xcontest,
                PhaseList &phase_list,
                PhaseTotals &phase_totals,
                WindList &wind_list,
@@ -119,21 +127,24 @@ public:
                const unsigned triangle = 1024,
                const unsigned sprint = 96,
                const unsigned max_iterations = 20e6,
-               const unsigned max_tree_size = 5e6) {
+               const unsigned max_tree_size = 5e6)
+  {
     DebugReplay *replay = Replay();
-    if (replay == nullptr) return false;
+    if (replay == nullptr)
+      return false;
 
     ComputerSettings computer_settings;
     computer_settings.SetDefaults();
 
     AnalyseFlight(*replay, takeoff_time, scoring_start_time, scoring_end_time, landing_time,
-                  olc_plus, dmst,
+                  olc_plus, dmst, xcontest,
                   phase_list, phase_totals, wind_list, computer_settings,
                   full, triangle, sprint,
                   max_iterations, max_tree_size);
     delete replay;
 
-    if (!qnh_available && computer_settings.pressure_available) {
+    if (!qnh_available && computer_settings.pressure_available)
+    {
       qnh = computer_settings.pressure;
       qnh_available = computer_settings.pressure_available;
     }
@@ -144,8 +155,10 @@ public:
   /**
    * Append a fix to this flight (only valid for in-memory flights)
    */
-  void AppendFix(const IGCFixEnhanced &fix) {
-    if (fixes == nullptr) return;
+  void AppendFix(const IGCFixEnhanced &fix)
+  {
+    if (fixes == nullptr)
+      return;
 
     fixes->push_back(fix);
   };
@@ -153,7 +166,8 @@ public:
   /**
    * Set the QNH for this flight
    */
-  void SetQNH(const double _qnh) {
+  void SetQNH(const double _qnh)
+  {
     qnh = AtmosphericPressure::HectoPascal(_qnh);
     qnh_available.Update(1);
   };
