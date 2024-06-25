@@ -1,0 +1,4 @@
+{
+  "java.compile.nullAnalysis.mode": "automatic",
+  "C_Cpp.default.compilerPath": "/usr/bin/gcc-12"
+}
